@@ -2,6 +2,8 @@
 
 A serverless, browser-based solar and electrical diagram simulator with local JSON file persistence (draw.io-style) and real-time circuit physics—including wire gauge ampacity limits, load/wire burnout, breaker trips, and DC-to-AC inverter conversion.
 
+Test it here [https://sowbyspencer.github.io/CircuitSimulator/public/index.html](https://sowbyspencer.github.io/CircuitSimulator/public/index.html)
+
 ## Project Workflow & Architecture
 
 This project follows an incremental **Scrum** and **Test-Driven Development (TDD)** workflow:
