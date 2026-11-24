@@ -10,6 +10,18 @@
 
 - **US-04 (Local Save/Open):** As a user, I want to save my diagram to a `.json` file on my device and load it back (like draw.io).
 - **US-05 (Parallel Loads & Busbars):** As a user, I want to connect multiple DC loads in parallel and split connections using generic Busbars.
+- **US-05a (Load Equivalent Resistance):** As a user, I want each DC Load to display its equivalent resistance in ohms, with the UI clearly distinguishing rated resistance from operating resistance when the load voltage changes. Add solver and UI tests for the displayed value.
+- **US-05b (Bank-Level Source Current):** Until source impedance is modeled, treat individual branch-current readings from ideal parallel-source banks as provisional and prefer displaying the bank's total current. Add tests ensuring source-current display is invariant to source placement and wiring/order where the electrical topology is unchanged. A source wired backwards in a series chain must instead be reported as absorbing input current with negative power.
+
+### Follow-up implementation: source impedance and realistic current sharing
+
+Replace the interim bank-level display with a physical source model:
+
+- Add an internal resistance value to each DC source, with a documented default and optional per-source configuration.
+- Model each source as an ideal voltage source in series with its internal resistance when stamping the MNA system.
+- Calculate each source's terminal voltage, branch current, output power, and internal loss from the solved circuit.
+- Let parallel-source current divide naturally according to source voltage, internal resistance, and any current limits rather than forcing equal sharing.
+- Add regression tests for matched sources, mismatched sources, unequal resistances, series sources, open circuits, shorts, and conservation of current and power.
 
 ## Sprint 3: Protection, Wire Gauges & Thermal Burnout
 

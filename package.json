@@ -4,7 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "esbuild src/main.jsx --bundle --outfile=public/bundle.js --loader:.js=jsx",
+    "dev": "esbuild src/main.jsx --bundle --outfile=public/bundle.js --loader:.js=jsx --watch --servedir=public",
     "test": "node --test",
     "test:watch": "node --test --watch"
+  },
+  "dependencies": {
+    "@xyflow/react": "^13.0.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
   }
 }
