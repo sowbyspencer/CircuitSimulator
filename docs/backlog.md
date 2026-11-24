@@ -12,6 +12,7 @@
 - **US-05 (Parallel Loads & Busbars):** As a user, I want to connect multiple DC loads in parallel and split connections using generic Busbars.
 - **US-05a (Load Equivalent Resistance):** As a user, I want each DC Load to display its equivalent resistance in ohms, with the UI clearly distinguishing rated resistance from operating resistance when the load voltage changes. Add solver and UI tests for the displayed value.
 - **US-05b (Bank-Level Source Current):** Until source impedance is modeled, treat individual branch-current readings from ideal parallel-source banks as provisional and prefer displaying the bank's total current. Add tests ensuring source-current display is invariant to source placement and wiring/order where the electrical topology is unchanged. A source wired backwards in a series chain must instead be reported as absorbing input current with negative power.
+- **US-05c (Component Palette & Editing):** As a user, I want to drag DC Sources and Loads from a left-side component palette onto the canvas, delete cards and their wires, and edit source voltage plus load rated voltage and wattage directly on the cards.
 
 ### Follow-up implementation: source impedance and realistic current sharing
 
@@ -27,6 +28,7 @@ Replace the interim bank-level display with a physical source model:
 
 - **US-06 (Switches & Breakers):** As a user, I want to place toggleable Breakers/Fuses that open the circuit when current exceeds their amp rating.
 - **US-07 (Wire Gauges & Burnout):** As a user, I want to assign AWG wire sizes that heat up and burn open if current exceeds safe ampacity over time.
+- **US-07a (Load Overvoltage & Burnout):** As a user, I want a DC Load to overheat and burn open when supplied voltage significantly exceeds its rated/nominal voltage (e.g., a 12V-rated 120W load connected to a 24V source or two 12V sources in series), opening the circuit until repaired/reset.
 
 ## Sprint 4: AC Domain & Inverters
 

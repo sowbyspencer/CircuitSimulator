@@ -5,6 +5,7 @@ export function DcLoadNode({ data }) {
   const amps = data.amps ?? 0;
   const volts = data.volts ?? 0;
   const isActive = amps > 0;
+  const update = (field) => (event) => data.onUpdate?.({ [field]: Number(event.target.value) || 0 });
 
   return (
     <div
@@ -14,15 +15,29 @@ export function DcLoadNode({ data }) {
         border: isActive ? '2px solid #10b981' : '2px solid #475569',
         borderRadius: '8px',
         padding: '12px',
+        position: 'relative',
         minWidth: '165px',
         fontFamily: 'system-ui, sans-serif',
       }}
     >
+      <button
+        className="nodrag"
+        onClick={data.onDelete}
+        title="Delete load"
+        style={{ position: 'absolute', top: '5px', right: '7px', border: 0, background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '18px' }}
+      >
+        ×
+      </button>
       <div style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #334155', paddingBottom: '4px' }}>
         DC Load
       </div>
       <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-        Rating: <strong style={{ color: '#f8fafc' }}>{data.watts}W</strong>
+        Watts:{' '}
+        <input className="nodrag" type="number" min="0" step="1" value={data.watts} onChange={update('watts')} style={{ width: '58px', color: '#f8fafc', background: '#334155', border: '1px solid #64748b', borderRadius: '3px' }} />W
+      </div>
+      <div style={{ fontSize: '14px', color: '#94a3b8', marginTop: '4px' }}>
+        Rated:{' '}
+        <input className="nodrag" type="number" min="0" step="0.1" value={data.nominalVolts ?? 12} onChange={update('nominalVolts')} style={{ width: '58px', color: '#f8fafc', background: '#334155', border: '1px solid #64748b', borderRadius: '3px' }} />V
       </div>
       <div style={{ fontSize: '14px', color: '#94a3b8', marginTop: '4px' }}>
         Input: <strong style={{ color: isActive ? '#fbbf24' : '#f8fafc' }}>{volts.toFixed(1)}V</strong>

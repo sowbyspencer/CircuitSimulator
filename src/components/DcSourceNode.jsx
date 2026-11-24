@@ -7,6 +7,7 @@ export function DcSourceNode({ data }) {
   const watts = data.volts * (amps - inputAmps);
   const isSupplying = amps > 0;
   const isCharging = inputAmps > 0;
+  const updateVolts = (event) => data.onUpdate?.({ volts: Number(event.target.value) || 0 });
 
   return (
     <div
@@ -16,15 +17,25 @@ export function DcSourceNode({ data }) {
         border: isSupplying ? '2px solid #3b82f6' : '2px solid #475569',
         borderRadius: '8px',
         padding: '12px',
+        position: 'relative',
         minWidth: '165px',
         fontFamily: 'system-ui, sans-serif',
       }}
     >
+      <button
+        className="nodrag"
+        onClick={data.onDelete}
+        title="Delete source"
+        style={{ position: 'absolute', top: '5px', right: '7px', border: 0, background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '18px' }}
+      >
+        ×
+      </button>
       <div style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #334155', paddingBottom: '4px' }}>
         DC Source
       </div>
       <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-        Rating: <strong style={{ color: '#f8fafc' }}>{data.volts}V</strong>
+        Rating:{' '}
+        <input className="nodrag" type="number" min="0" step="0.1" value={data.volts} onChange={updateVolts} style={{ width: '58px', color: '#f8fafc', background: '#334155', border: '1px solid #64748b', borderRadius: '3px' }} />V
       </div>
       <div style={{ fontSize: '14px', color: '#94a3b8', marginTop: '4px' }}>
         {isCharging ? 'Input' : 'Output'}:{' '}

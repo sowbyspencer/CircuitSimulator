@@ -33124,6 +33124,27 @@
     return edges.filter((edge) => edge.id !== edgeId);
   }
 
+  // src/appActions.js
+  function createPaletteNode(type, id2, position) {
+    return {
+      id: id2,
+      type,
+      position,
+      data: type === "dcSource" ? { volts: 12 } : { nominalVolts: 12, watts: 120 }
+    };
+  }
+  function updateNodeData(nodes, nodeId, patch) {
+    return nodes.map(
+      (node) => node.id === nodeId ? { ...node, data: { ...node.data, ...patch } } : node
+    );
+  }
+  function deleteNodeAndEdges(nodes, edges, nodeId) {
+    return {
+      nodes: nodes.filter((node) => node.id !== nodeId),
+      edges: edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
+    };
+  }
+
   // src/components/DcSourceNode.jsx
   var import_react3 = __toESM(require_react(), 1);
   function DcSourceNode({ data }) {
@@ -33132,6 +33153,7 @@
     const watts = data.volts * (amps - inputAmps);
     const isSupplying = amps > 0;
     const isCharging = inputAmps > 0;
+    const updateVolts = (event) => data.onUpdate?.({ volts: Number(event.target.value) || 0 });
     return /* @__PURE__ */ import_react3.default.createElement(
       "div",
       {
@@ -33141,12 +33163,23 @@
           border: isSupplying ? "2px solid #3b82f6" : "2px solid #475569",
           borderRadius: "8px",
           padding: "12px",
+          position: "relative",
           minWidth: "165px",
           fontFamily: "system-ui, sans-serif"
         }
       },
+      /* @__PURE__ */ import_react3.default.createElement(
+        "button",
+        {
+          className: "nodrag",
+          onClick: data.onDelete,
+          title: "Delete source",
+          style: { position: "absolute", top: "5px", right: "7px", border: 0, background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: "18px" }
+        },
+        "\xD7"
+      ),
       /* @__PURE__ */ import_react3.default.createElement("div", { style: { fontWeight: "bold", marginBottom: "8px", borderBottom: "1px solid #334155", paddingBottom: "4px" } }, "DC Source"),
-      /* @__PURE__ */ import_react3.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8" } }, "Rating: ", /* @__PURE__ */ import_react3.default.createElement("strong", { style: { color: "#f8fafc" } }, data.volts, "V")),
+      /* @__PURE__ */ import_react3.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8" } }, "Rating:", " ", /* @__PURE__ */ import_react3.default.createElement("input", { className: "nodrag", type: "number", min: "0", step: "0.1", value: data.volts, onChange: updateVolts, style: { width: "58px", color: "#f8fafc", background: "#334155", border: "1px solid #64748b", borderRadius: "3px" } }), "V"),
       /* @__PURE__ */ import_react3.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, isCharging ? "Input" : "Output", ":", " ", /* @__PURE__ */ import_react3.default.createElement("strong", { style: { color: isSupplying ? "#60a5fa" : isCharging ? "#fbbf24" : "#f8fafc" } }, (isCharging ? inputAmps : amps).toFixed(1), "A")),
       /* @__PURE__ */ import_react3.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, "Power: ", /* @__PURE__ */ import_react3.default.createElement("strong", { style: { color: isSupplying || isCharging ? "#fbbf24" : "#f8fafc" } }, watts.toFixed(0), "W")),
       /* @__PURE__ */ import_react3.default.createElement("div", { style: { position: "relative", marginTop: "12px", textAlign: "right", fontSize: "12px", color: "#f87171" } }, /* @__PURE__ */ import_react3.default.createElement("span", null, "+ POS"), /* @__PURE__ */ import_react3.default.createElement(
@@ -33176,6 +33209,7 @@
     const amps = data.amps ?? 0;
     const volts = data.volts ?? 0;
     const isActive = amps > 0;
+    const update = (field) => (event) => data.onUpdate?.({ [field]: Number(event.target.value) || 0 });
     return /* @__PURE__ */ import_react5.default.createElement(
       "div",
       {
@@ -33185,12 +33219,24 @@
           border: isActive ? "2px solid #10b981" : "2px solid #475569",
           borderRadius: "8px",
           padding: "12px",
+          position: "relative",
           minWidth: "165px",
           fontFamily: "system-ui, sans-serif"
         }
       },
+      /* @__PURE__ */ import_react5.default.createElement(
+        "button",
+        {
+          className: "nodrag",
+          onClick: data.onDelete,
+          title: "Delete load",
+          style: { position: "absolute", top: "5px", right: "7px", border: 0, background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: "18px" }
+        },
+        "\xD7"
+      ),
       /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontWeight: "bold", marginBottom: "8px", borderBottom: "1px solid #334155", paddingBottom: "4px" } }, "DC Load"),
-      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8" } }, "Rating: ", /* @__PURE__ */ import_react5.default.createElement("strong", { style: { color: "#f8fafc" } }, data.watts, "W")),
+      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8" } }, "Watts:", " ", /* @__PURE__ */ import_react5.default.createElement("input", { className: "nodrag", type: "number", min: "0", step: "1", value: data.watts, onChange: update("watts"), style: { width: "58px", color: "#f8fafc", background: "#334155", border: "1px solid #64748b", borderRadius: "3px" } }), "W"),
+      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, "Rated:", " ", /* @__PURE__ */ import_react5.default.createElement("input", { className: "nodrag", type: "number", min: "0", step: "0.1", value: data.nominalVolts ?? 12, onChange: update("nominalVolts"), style: { width: "58px", color: "#f8fafc", background: "#334155", border: "1px solid #64748b", borderRadius: "3px" } }), "V"),
       /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, "Input: ", /* @__PURE__ */ import_react5.default.createElement("strong", { style: { color: isActive ? "#fbbf24" : "#f8fafc" } }, volts.toFixed(1), "V")),
       /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, "Draw: ", /* @__PURE__ */ import_react5.default.createElement("strong", { style: { color: isActive ? "#10b981" : "#f8fafc" } }, amps.toFixed(1), "A")),
       /* @__PURE__ */ import_react5.default.createElement("div", { style: { position: "relative", marginTop: "12px", textAlign: "left", fontSize: "12px", color: "#f87171" } }, /* @__PURE__ */ import_react5.default.createElement(
@@ -33221,14 +33267,24 @@
   };
   var initialNodes = [
     { id: "src-1", type: "dcSource", position: { x: 100, y: 150 }, data: { volts: 12 } },
-    { id: "load-1", type: "dcLoad", position: { x: 420, y: 150 }, data: { watts: 120 } }
+    { id: "load-1", type: "dcLoad", position: { x: 420, y: 150 }, data: { nominalVolts: 12, watts: 120 } }
   ];
   var initialEdges = [];
   function App() {
     const [nodes, setNodes, onNodesChange] = wa(initialNodes);
     const [edges, setEdges, onEdgesChange] = Ta(initialEdges);
     const edgeReconnectSuccessful = (0, import_react7.useRef)(true);
+    const reactFlowInstance = (0, import_react7.useRef)(null);
+    const reactFlowWrapper = (0, import_react7.useRef)(null);
+    const [dragOver, setDragOver] = (0, import_react7.useState)(false);
     const simulation = (0, import_react7.useMemo)(() => solveDcCircuit(nodes, edges), [nodes, edges]);
+    const updateNodeData2 = (0, import_react7.useCallback)((nodeId, patch) => {
+      setNodes((currentNodes) => updateNodeData(currentNodes, nodeId, patch));
+    }, [setNodes]);
+    const deleteNode = (0, import_react7.useCallback)((nodeId) => {
+      setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
+      setEdges((currentEdges) => deleteNodeAndEdges([], currentEdges, nodeId).edges);
+    }, [setEdges, setNodes]);
     const displayNodes = (0, import_react7.useMemo)(
       () => nodes.map((node) => {
         if (node.type === "dcSource") {
@@ -33237,7 +33293,9 @@
             data: {
               ...node.data,
               amps: simulation.sourceAmps[node.id] ?? 0,
-              inputAmps: simulation.sourceInputAmps?.[node.id] ?? 0
+              inputAmps: simulation.sourceInputAmps?.[node.id] ?? 0,
+              onUpdate: (patch) => updateNodeData2(node.id, patch),
+              onDelete: () => deleteNode(node.id)
             }
           };
         }
@@ -33247,13 +33305,15 @@
             data: {
               ...node.data,
               amps: simulation.loadAmps[node.id] ?? 0,
-              volts: simulation.loadVolts[node.id] ?? 0
+              volts: simulation.loadVolts[node.id] ?? 0,
+              onUpdate: (patch) => updateNodeData2(node.id, patch),
+              onDelete: () => deleteNode(node.id)
             }
           };
         }
         return node;
       }),
-      [nodes, simulation]
+      [deleteNode, nodes, simulation, updateNodeData2]
     );
     const displayEdges = (0, import_react7.useMemo)(
       () => edges.map((edge) => {
@@ -33296,18 +33356,29 @@
       },
       [setEdges]
     );
-    const addSource = () => {
-      const id2 = `src-${Date.now()}`;
-      setNodes(
-        (nds) => nds.concat({ id: id2, type: "dcSource", position: { x: 100, y: 50 + nds.length * 40 }, data: { volts: 12 } })
-      );
+    const addNodeAt = (0, import_react7.useCallback)((type, position) => {
+      const id2 = `${type === "dcSource" ? "src" : "load"}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      setNodes((currentNodes) => currentNodes.concat(createPaletteNode(type, id2, position)));
+    }, [setNodes]);
+    const onPaletteDragStart = (event, type) => {
+      event.dataTransfer.setData("application/reactflow", type);
+      event.dataTransfer.effectAllowed = "move";
     };
-    const addLoad = () => {
-      const id2 = `load-${Date.now()}`;
-      setNodes(
-        (nds) => nds.concat({ id: id2, type: "dcLoad", position: { x: 420, y: 50 + nds.length * 40 }, data: { watts: 120 } })
-      );
-    };
+    const onDragOver = (0, import_react7.useCallback)((event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      setDragOver(true);
+    }, []);
+    const onDragLeave = (0, import_react7.useCallback)(() => setDragOver(false), []);
+    const onDrop = (0, import_react7.useCallback)((event) => {
+      event.preventDefault();
+      setDragOver(false);
+      const type = event.dataTransfer.getData("application/reactflow");
+      if (!type || !reactFlowInstance.current) return;
+      const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+      if (!bounds || event.clientX < bounds.left) return;
+      addNodeAt(type, reactFlowInstance.current.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    }, [addNodeAt]);
     return /* @__PURE__ */ import_react7.default.createElement("div", { style: { width: "100vw", height: "100vh", display: "flex", flexDirection: "column" } }, /* @__PURE__ */ import_react7.default.createElement("style", null, `
         .react-flow__edge.reverse-flow path.react-flow__edge-path {
           animation-direction: reverse;
@@ -33327,8 +33398,6 @@
         }
       },
       /* @__PURE__ */ import_react7.default.createElement("strong", null, "Circuit Simulator"),
-      /* @__PURE__ */ import_react7.default.createElement("button", { onClick: addSource, style: { padding: "6px 12px", cursor: "pointer" } }, "+ DC Source (12V)"),
-      /* @__PURE__ */ import_react7.default.createElement("button", { onClick: addLoad, style: { padding: "6px 12px", cursor: "pointer" } }, "+ DC Load (120W)"),
       simulation.hasShortCircuit && /* @__PURE__ */ import_react7.default.createElement(
         "span",
         {
@@ -33345,23 +33414,73 @@
         "\u26A0\uFE0F SHORT CIRCUIT DETECTED"
       ),
       /* @__PURE__ */ import_react7.default.createElement("span", { style: { marginLeft: "auto", fontSize: "13px", color: "#94a3b8" } }, "Drag wire ends to move or drop in empty space to disconnect.")
-    ), /* @__PURE__ */ import_react7.default.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ import_react7.default.createElement(
-      _a,
+    ), /* @__PURE__ */ import_react7.default.createElement("div", { style: { flex: 1, display: "flex", minHeight: 0 } }, /* @__PURE__ */ import_react7.default.createElement(
+      "aside",
       {
-        nodes: displayNodes,
-        edges: displayEdges,
-        nodeTypes,
-        onNodesChange,
-        onEdgesChange,
-        onConnect,
-        onReconnectStart,
-        onReconnect,
-        onReconnectEnd,
-        connectionMode: ConnectionMode.Loose,
-        fitView: true
+        style: {
+          width: "190px",
+          flexShrink: 0,
+          padding: "16px",
+          background: "#0f172a",
+          borderRight: "1px solid #334155",
+          color: "#cbd5e1",
+          fontFamily: "system-ui, sans-serif"
+        }
       },
-      /* @__PURE__ */ import_react7.default.createElement(Ua, { color: "#334155", gap: 20 }),
-      /* @__PURE__ */ import_react7.default.createElement(ro, null)
+      /* @__PURE__ */ import_react7.default.createElement("strong", { style: { display: "block", marginBottom: "6px", color: "#f8fafc" } }, "Components"),
+      /* @__PURE__ */ import_react7.default.createElement("span", { style: { display: "block", fontSize: "12px", marginBottom: "14px", color: "#94a3b8" } }, "Drag a component onto the canvas."),
+      [
+        ["dcSource", "DC Source", "12V source"],
+        ["dcLoad", "DC Load", "12V / 120W load"]
+      ].map(([type, label, detail]) => /* @__PURE__ */ import_react7.default.createElement(
+        "div",
+        {
+          key: type,
+          draggable: true,
+          onDragStart: (event) => onPaletteDragStart(event, type),
+          style: {
+            padding: "12px",
+            marginBottom: "10px",
+            border: "1px solid #475569",
+            borderRadius: "7px",
+            background: "#1e293b",
+            cursor: "grab"
+          }
+        },
+        /* @__PURE__ */ import_react7.default.createElement("strong", { style: { display: "block", color: "#f8fafc" } }, label),
+        /* @__PURE__ */ import_react7.default.createElement("span", { style: { fontSize: "12px", color: "#94a3b8" } }, detail)
+      )),
+      /* @__PURE__ */ import_react7.default.createElement("span", { style: { display: "block", marginTop: "18px", fontSize: "12px", color: "#94a3b8" } }, "Edit values directly on cards. Use the \xD7 button to delete a card and its wires.")
+    ), /* @__PURE__ */ import_react7.default.createElement(
+      "div",
+      {
+        ref: reactFlowWrapper,
+        onDragOver,
+        onDragLeave,
+        onDrop,
+        style: { flex: 1, position: "relative", border: dragOver ? "2px dashed #60a5fa" : "none" }
+      },
+      /* @__PURE__ */ import_react7.default.createElement(
+        _a,
+        {
+          nodes: displayNodes,
+          edges: displayEdges,
+          nodeTypes,
+          onNodesChange,
+          onEdgesChange,
+          onConnect,
+          onReconnectStart,
+          onReconnect,
+          onReconnectEnd,
+          onInit: (instance) => {
+            reactFlowInstance.current = instance;
+          },
+          connectionMode: ConnectionMode.Loose,
+          fitView: true
+        },
+        /* @__PURE__ */ import_react7.default.createElement(Ua, { color: "#334155", gap: 20 }),
+        /* @__PURE__ */ import_react7.default.createElement(ro, null)
+      )
     )));
   }
 
