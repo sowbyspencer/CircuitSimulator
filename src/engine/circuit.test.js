@@ -288,10 +288,7 @@ describe("Sprint 1: Generic DC Circuit Solver", () => {
   it("supports non-integer voltage and power without losing precision beyond output rounding", () => {
     const fractionalSource = { id: "src-fractional", type: "dcSource", data: { volts: 9 } };
     const fractionalLoad = { id: "load-fractional", type: "dcLoad", data: { watts: 10 } };
-    const result = solveDcCircuit(
-      [fractionalSource, fractionalLoad],
-      connectedEdges("src-fractional", "load-fractional"),
-    );
+    const result = solveDcCircuit([fractionalSource, fractionalLoad], connectedEdges("src-fractional", "load-fractional"));
 
     assert.equal(result.loadVolts["load-fractional"], 9);
     assert.equal(result.loadAmps["load-fractional"], 1.111);
@@ -390,5 +387,29 @@ describe("Sprint 1: Generic DC Circuit Solver", () => {
     assert.equal(result.loadAmps["load-1"], 10);
     assert.ok(result.edgeAmps["neg-1"] > 0);
     assert.ok(result.edgeAmps["neg-2"] > 0);
+  });
+
+  it("surges current (20A / 480W) when a 24V source feeds a 12V 120W rated load", () => {
+    const source24 = { id: "src-24", type: "dcSource", data: { volts: 24 } };
+    const load12 = { id: "load-12", type: "dcLoad", data: { nominalVolts: 12, watts: 120 } };
+    const result = solveDcCircuit([source24, load12], connectedEdges("src-24", "load-12"));
+
+    assert.equal(result.loadVolts["load-12"], 24);
+    assert.equal(result.loadAmps["load-12"], 20);
+    assert.equal(result.sourceAmps["src-24"], 20);
+  });
+
+  it("opens the circuit (0A) once a load has burned out", () => {
+    const source24 = { id: "src-24", type: "dcSource", data: { volts: 24 } };
+    const burnedLoad = {
+      id: "load-burned",
+      type: "dcLoad",
+      data: { nominalVolts: 12, watts: 120, burned: true },
+    };
+    const result = solveDcCircuit([source24, burnedLoad], connectedEdges("src-24", "load-burned"));
+
+    assert.equal(result.loadAmps["load-burned"], 0);
+    assert.equal(result.sourceAmps["src-24"], 0);
+    assert.equal(result.edgeAmps["e1"], 0);
   });
 });
