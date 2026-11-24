@@ -191,12 +191,15 @@ function solveSingleDcCircuit(nodes, edges) {
 
   // Stamp DC Loads as Conductances (1 / R)
   for (const load of loads) {
+    if (load.data.burned) continue;
+
     const p = handleToNet.get(`${load.id}:pos`);
     const n = handleToNet.get(`${load.id}:neg`);
     if (p === n || !load.data.watts || load.data.watts <= 0) continue;
 
+    const hasExplicitNominal = typeof load.data.nominalVolts === "number" && load.data.nominalVolts > 0;
     const directBusVolts = sourceNets.has(p) && sourceNets.has(n) ? Math.abs(idealVolts.get(p) - idealVolts.get(n)) : 0;
-    const vRef = directBusVolts > 0 ? directBusVolts : load.data.nominalVolts || 12;
+    const vRef = hasExplicitNominal ? load.data.nominalVolts : directBusVolts > 0 ? directBusVolts : 12;
     const R = (vRef * vRef) / load.data.watts;
     const g = 1 / R;
 
@@ -359,9 +362,7 @@ export function solveDcCircuit(nodes, edges) {
   for (const componentNodeIds of components) {
     const componentNodeIdSet = new Set(componentNodeIds);
     const componentNodes = componentNodeIds.map((nodeId) => nodeById.get(nodeId));
-    const componentEdges = edges.filter(
-      (edge) => componentNodeIdSet.has(edge.source) && componentNodeIdSet.has(edge.target),
-    );
+    const componentEdges = edges.filter((edge) => componentNodeIdSet.has(edge.source) && componentNodeIdSet.has(edge.target));
     const componentResult = solveSingleDcCircuit(componentNodes, componentEdges);
 
     Object.assign(result.loadAmps, componentResult.loadAmps);
