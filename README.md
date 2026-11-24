@@ -13,12 +13,12 @@ This project follows an incremental **Scrum** and **Test-Driven Development (TDD
 
 ## Current DC Simulation Behavior
 
-- Loads are modeled as non-polarized resistive loads. Their resistance is derived from the configured power and the circuit reference voltage, so reversing a load connection preserves voltage and current magnitude while reversing signed wire flow.
+- Loads are modeled as non-polarized resistive loads. When `nominalVolts` is configured (e.g., `12V`), resistance is fixed to $R = V_{\text{nom}}^2 / \text{Watts}$, causing current and power to surge if supplied voltage exceeds the rating.
+- Loads exposed to overvoltage display an immediate `⚠️ OVERVOLTAGE` warning and heat up over time (~1.5s at 2× rated voltage) until they burn open (`0A` / `🔥 BURNED OUT`), where they remain open-circuited until repaired via the card's reset button.
 - A source normally reports positive output current and output power.
 - A source wired backwards in a series chain can absorb current from the rest of the circuit. It reports this as `Input` current and negative power rather than incorrectly reporting positive output.
 - Short-circuit status is scoped to the affected connected circuit, and healthy disconnected circuits continue to solve normally.
 - Parallel ideal voltage sources do not have physically determined branch-current sharing. Their individual current readings are provisional until source impedance is implemented; the planned model is documented in [the backlog](./docs/backlog.md).
-- Loads are configured by rated/nominal voltage and watts. The solver derives their equivalent resistance from those values and the circuit operating voltage; the measured input voltage and current are displayed separately.
 
 ## Prerequisites
 

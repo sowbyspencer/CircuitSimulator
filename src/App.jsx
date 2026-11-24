@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   useNodesState,
@@ -10,6 +10,7 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { solveDcCircuit } from './engine/circuit.js';
+import { stepLoadThermal } from './engine/loadThermal.js';
 import { connectWire, moveWire, disconnectWire } from './engine/wireActions.js';
 import { createPaletteNode, deleteNodeAndEdges, updateNodeData as updateNodeDataAction } from './appActions.js';
 import { DcSourceNode } from './components/DcSourceNode.jsx';
@@ -22,7 +23,7 @@ const nodeTypes = {
 
 const initialNodes = [
   { id: 'src-1', type: 'dcSource', position: { x: 100, y: 150 }, data: { volts: 12 } },
-  { id: 'load-1', type: 'dcLoad', position: { x: 420, y: 150 }, data: { nominalVolts: 12, watts: 120 } },
+  { id: 'load-1', type: 'dcLoad', position: { x: 420, y: 150 }, data: { nominalVolts: 12, watts: 120, temp: 25, burned: false } },
 ];
 
 const initialEdges = [];
@@ -36,6 +37,36 @@ export default function App() {
   const [dragOver, setDragOver] = useState(false);
 
   const simulation = useMemo(() => solveDcCircuit(nodes, edges), [nodes, edges]);
+
+  // Keep latest simulation available to the 10Hz thermal tick without resetting the interval
+  const latestSimRef = useRef(simulation);
+  latestSimRef.current = simulation;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const sim = latestSimRef.current;
+      setNodes((currentNodes) => {
+        let changed = false;
+        const nextNodes = currentNodes.map((node) => {
+          if (node.type !== 'dcLoad') return node;
+          const inputVolts = sim.loadVolts[node.id] ?? 0;
+          const stepped = stepLoadThermal(node, inputVolts, 0.1);
+          if (
+            stepped.data.temp !== node.data.temp ||
+            stepped.data.burned !== node.data.burned ||
+            stepped.data.overvoltage !== node.data.overvoltage
+          ) {
+            changed = true;
+            return stepped;
+          }
+          return node;
+        });
+        return changed ? nextNodes : currentNodes;
+      });
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [setNodes]);
 
   const updateNodeData = useCallback((nodeId, patch) => {
     setNodes((currentNodes) => updateNodeDataAction(currentNodes, nodeId, patch));
@@ -98,7 +129,6 @@ export default function App() {
     [edges, simulation]
   );
 
-
   const onConnect = useCallback(
     (params) => setEdges((eds) => connectWire(eds, params)),
     [setEdges]
@@ -154,7 +184,7 @@ export default function App() {
     addNodeAt(type, reactFlowInstance.current.screenToFlowPosition({ x: event.clientX, y: event.clientY }));
   }, [addNodeAt]);
 
-    return (
+  return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <style>{`
         .react-flow__edge.reverse-flow path.react-flow__edge-path {
@@ -244,20 +274,20 @@ export default function App() {
           onDrop={onDrop}
           style={{ flex: 1, position: 'relative', border: dragOver ? '2px dashed #60a5fa' : 'none' }}
         >
-        <ReactFlow
-          nodes={displayNodes}
-          edges={displayEdges}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onReconnectStart={onReconnectStart}
-          onReconnect={onReconnect}
-          onReconnectEnd={onReconnectEnd}
-          onInit={(instance) => { reactFlowInstance.current = instance; }}
-          connectionMode={ConnectionMode.Loose}
-          fitView
-        >
+          <ReactFlow
+            nodes={displayNodes}
+            edges={displayEdges}
+            nodeTypes={nodeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onReconnectStart={onReconnectStart}
+            onReconnect={onReconnect}
+            onReconnectEnd={onReconnectEnd}
+            onInit={(instance) => { reactFlowInstance.current = instance; }}
+            connectionMode={ConnectionMode.Loose}
+            fitView
+          >
           <Background color="#334155" gap={20} />
           <Controls />
         </ReactFlow>
