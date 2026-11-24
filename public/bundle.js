@@ -23596,7 +23596,7 @@
       });
       module.exports = __toCommonJS(index_exports);
       var React6 = __toESM2(require_react());
-      var { useRef: useRef2, useEffect, isValidElement } = React6;
+      var { useRef: useRef2, useEffect: useEffect2, isValidElement } = React6;
       var _a2;
       var ReactSecretInternals = (
         //@ts-ignore
@@ -23740,7 +23740,7 @@
         if (val.current != null) {
           val.current.count += 1;
         }
-        useEffect(() => {
+        useEffect2(() => {
           if (val.current == null) {
             const counter = { count: 0 };
             registerRenderCounter(name, counter);
@@ -32947,11 +32947,13 @@
       I[vIdx] = src.data.volts || 0;
     });
     for (const load of loads) {
+      if (load.data.burned) continue;
       const p = handleToNet.get(`${load.id}:pos`);
       const n = handleToNet.get(`${load.id}:neg`);
       if (p === n || !load.data.watts || load.data.watts <= 0) continue;
+      const hasExplicitNominal = typeof load.data.nominalVolts === "number" && load.data.nominalVolts > 0;
       const directBusVolts = sourceNets.has(p) && sourceNets.has(n) ? Math.abs(idealVolts.get(p) - idealVolts.get(n)) : 0;
-      const vRef = directBusVolts > 0 ? directBusVolts : load.data.nominalVolts || 12;
+      const vRef = hasExplicitNominal ? load.data.nominalVolts : directBusVolts > 0 ? directBusVolts : 12;
       const R = vRef * vRef / load.data.watts;
       const g = 1 / R;
       G[p][p] += g;
@@ -33084,9 +33086,7 @@
     for (const componentNodeIds of components) {
       const componentNodeIdSet = new Set(componentNodeIds);
       const componentNodes = componentNodeIds.map((nodeId) => nodeById.get(nodeId));
-      const componentEdges = edges.filter(
-        (edge) => componentNodeIdSet.has(edge.source) && componentNodeIdSet.has(edge.target)
-      );
+      const componentEdges = edges.filter((edge) => componentNodeIdSet.has(edge.source) && componentNodeIdSet.has(edge.target));
       const componentResult = solveSingleDcCircuit(componentNodes, componentEdges);
       Object.assign(result.loadAmps, componentResult.loadAmps);
       Object.assign(result.loadVolts, componentResult.loadVolts);
@@ -33098,6 +33098,55 @@
       result.hasShortCircuit ||= componentResult.hasShortCircuit;
     }
     return result;
+  }
+
+  // src/engine/loadThermal.js
+  var AMBIENT_TEMP = 25;
+  var BURNOUT_TEMP = 150;
+  var OVERVOLTAGE_TOLERANCE = 1.1;
+  function stepLoadThermal(load, inputVolts, dt2) {
+    const data = load.data || {};
+    if (data.burned) {
+      return {
+        ...load,
+        data: { ...data, overvoltage: false, temp: data.temp ?? BURNOUT_TEMP }
+      };
+    }
+    const ratedVolts = data.nominalVolts ?? 12;
+    const currentTemp = data.temp ?? AMBIENT_TEMP;
+    if (ratedVolts > 0 && inputVolts > ratedVolts * OVERVOLTAGE_TOLERANCE) {
+      const ratio = inputVolts / ratedVolts;
+      const heatRate = ratio * ratio * 21.25;
+      const nextTemp = currentTemp + heatRate * dt2;
+      if (nextTemp >= BURNOUT_TEMP) {
+        return {
+          ...load,
+          data: {
+            ...data,
+            temp: BURNOUT_TEMP,
+            burned: true,
+            overvoltage: false
+          }
+        };
+      }
+      return {
+        ...load,
+        data: {
+          ...data,
+          temp: nextTemp,
+          overvoltage: true
+        }
+      };
+    }
+    const cooledTemp = Math.max(AMBIENT_TEMP, currentTemp - 40 * dt2);
+    return {
+      ...load,
+      data: {
+        ...data,
+        temp: cooledTemp,
+        overvoltage: false
+      }
+    };
   }
 
   // src/engine/wireActions.js
@@ -33208,19 +33257,28 @@
   function DcLoadNode({ data }) {
     const amps = data.amps ?? 0;
     const volts = data.volts ?? 0;
-    const isActive = amps > 0;
+    const temp = data.temp ?? 25;
+    const isOvervoltage = Boolean(data.overvoltage);
+    const isBurned = Boolean(data.burned);
+    const isActive = amps > 0 && !isBurned;
     const update = (field) => (event) => data.onUpdate?.({ [field]: Number(event.target.value) || 0 });
+    const handleRepair = () => data.onUpdate?.({ burned: false, overvoltage: false, temp: 25 });
+    let borderColor = "#475569";
+    if (isBurned) borderColor = "#7f1d1d";
+    else if (isOvervoltage) borderColor = "#ef4444";
+    else if (isActive) borderColor = "#10b981";
     return /* @__PURE__ */ import_react5.default.createElement(
       "div",
       {
         style: {
-          background: "#1e293b",
+          background: isBurned ? "#1c1917" : "#1e293b",
           color: "#f8fafc",
-          border: isActive ? "2px solid #10b981" : "2px solid #475569",
+          border: `2px solid ${borderColor}`,
+          boxShadow: isOvervoltage ? "0 0 14px rgba(239, 68, 68, 0.55)" : "none",
           borderRadius: "8px",
           padding: "12px",
           position: "relative",
-          minWidth: "165px",
+          minWidth: "185px",
           fontFamily: "system-ui, sans-serif"
         }
       },
@@ -33235,10 +33293,90 @@
         "\xD7"
       ),
       /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontWeight: "bold", marginBottom: "8px", borderBottom: "1px solid #334155", paddingBottom: "4px" } }, "DC Load"),
-      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8" } }, "Watts:", " ", /* @__PURE__ */ import_react5.default.createElement("input", { className: "nodrag", type: "number", min: "0", step: "1", value: data.watts, onChange: update("watts"), style: { width: "58px", color: "#f8fafc", background: "#334155", border: "1px solid #64748b", borderRadius: "3px" } }), "W"),
-      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, "Rated:", " ", /* @__PURE__ */ import_react5.default.createElement("input", { className: "nodrag", type: "number", min: "0", step: "0.1", value: data.nominalVolts ?? 12, onChange: update("nominalVolts"), style: { width: "58px", color: "#f8fafc", background: "#334155", border: "1px solid #64748b", borderRadius: "3px" } }), "V"),
-      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, "Input: ", /* @__PURE__ */ import_react5.default.createElement("strong", { style: { color: isActive ? "#fbbf24" : "#f8fafc" } }, volts.toFixed(1), "V")),
+      isBurned && /* @__PURE__ */ import_react5.default.createElement(
+        "div",
+        {
+          style: {
+            background: "#450a0a",
+            color: "#fca5a5",
+            border: "1px solid #ef4444",
+            borderRadius: "5px",
+            padding: "6px 8px",
+            marginBottom: "8px",
+            fontSize: "12px",
+            fontWeight: "bold",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px"
+          }
+        },
+        /* @__PURE__ */ import_react5.default.createElement("span", null, "\u{1F525} BURNED OUT (OPEN)"),
+        /* @__PURE__ */ import_react5.default.createElement(
+          "button",
+          {
+            className: "nodrag",
+            onClick: handleRepair,
+            style: {
+              background: "#ef4444",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              padding: "4px 8px",
+              fontSize: "11px",
+              fontWeight: "bold",
+              cursor: "pointer"
+            }
+          },
+          "\u{1F527} Repair / Reset"
+        )
+      ),
+      !isBurned && isOvervoltage && /* @__PURE__ */ import_react5.default.createElement(
+        "div",
+        {
+          style: {
+            background: "#7c2d12",
+            color: "#fed7aa",
+            border: "1px solid #f97316",
+            borderRadius: "5px",
+            padding: "4px 8px",
+            marginBottom: "8px",
+            fontSize: "12px",
+            fontWeight: "bold"
+          }
+        },
+        "\u26A0\uFE0F OVERVOLTAGE (",
+        Math.round(temp),
+        "\xB0C)"
+      ),
+      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8" } }, "Watts:", " ", /* @__PURE__ */ import_react5.default.createElement(
+        "input",
+        {
+          className: "nodrag",
+          type: "number",
+          min: "0",
+          step: "1",
+          disabled: isBurned,
+          value: data.watts,
+          onChange: update("watts"),
+          style: { width: "58px", color: "#f8fafc", background: "#334155", border: "1px solid #64748b", borderRadius: "3px" }
+        }
+      ), "W"),
+      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, "Rated:", " ", /* @__PURE__ */ import_react5.default.createElement(
+        "input",
+        {
+          className: "nodrag",
+          type: "number",
+          min: "0",
+          step: "0.1",
+          disabled: isBurned,
+          value: data.nominalVolts ?? 12,
+          onChange: update("nominalVolts"),
+          style: { width: "58px", color: "#f8fafc", background: "#334155", border: "1px solid #64748b", borderRadius: "3px" }
+        }
+      ), "V"),
+      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, "Input: ", /* @__PURE__ */ import_react5.default.createElement("strong", { style: { color: isOvervoltage ? "#ef4444" : isActive ? "#fbbf24" : "#f8fafc" } }, volts.toFixed(1), "V")),
       /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "14px", color: "#94a3b8", marginTop: "4px" } }, "Draw: ", /* @__PURE__ */ import_react5.default.createElement("strong", { style: { color: isActive ? "#10b981" : "#f8fafc" } }, amps.toFixed(1), "A")),
+      /* @__PURE__ */ import_react5.default.createElement("div", { style: { fontSize: "13px", color: "#94a3b8", marginTop: "4px" } }, "Temp: ", /* @__PURE__ */ import_react5.default.createElement("strong", { style: { color: temp > 80 ? "#f97316" : "#cbd5e1" } }, Math.round(temp), "\xB0C")),
       /* @__PURE__ */ import_react5.default.createElement("div", { style: { position: "relative", marginTop: "12px", textAlign: "left", fontSize: "12px", color: "#f87171" } }, /* @__PURE__ */ import_react5.default.createElement(
         fr,
         {
@@ -33267,7 +33405,7 @@
   };
   var initialNodes = [
     { id: "src-1", type: "dcSource", position: { x: 100, y: 150 }, data: { volts: 12 } },
-    { id: "load-1", type: "dcLoad", position: { x: 420, y: 150 }, data: { nominalVolts: 12, watts: 120 } }
+    { id: "load-1", type: "dcLoad", position: { x: 420, y: 150 }, data: { nominalVolts: 12, watts: 120, temp: 25, burned: false } }
   ];
   var initialEdges = [];
   function App() {
@@ -33278,6 +33416,28 @@
     const reactFlowWrapper = (0, import_react7.useRef)(null);
     const [dragOver, setDragOver] = (0, import_react7.useState)(false);
     const simulation = (0, import_react7.useMemo)(() => solveDcCircuit(nodes, edges), [nodes, edges]);
+    const latestSimRef = (0, import_react7.useRef)(simulation);
+    latestSimRef.current = simulation;
+    (0, import_react7.useEffect)(() => {
+      const interval = setInterval(() => {
+        const sim = latestSimRef.current;
+        setNodes((currentNodes) => {
+          let changed = false;
+          const nextNodes = currentNodes.map((node) => {
+            if (node.type !== "dcLoad") return node;
+            const inputVolts = sim.loadVolts[node.id] ?? 0;
+            const stepped = stepLoadThermal(node, inputVolts, 0.1);
+            if (stepped.data.temp !== node.data.temp || stepped.data.burned !== node.data.burned || stepped.data.overvoltage !== node.data.overvoltage) {
+              changed = true;
+              return stepped;
+            }
+            return node;
+          });
+          return changed ? nextNodes : currentNodes;
+        });
+      }, 100);
+      return () => clearInterval(interval);
+    }, [setNodes]);
     const updateNodeData2 = (0, import_react7.useCallback)((nodeId, patch) => {
       setNodes((currentNodes) => updateNodeData(currentNodes, nodeId, patch));
     }, [setNodes]);
