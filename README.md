@@ -4,14 +4,16 @@ A serverless, browser-based solar and electrical diagram simulator with local JS
 
 Test it here [https://sowbyspencer.github.io/CircuitSimulator/public/index.html](https://sowbyspencer.github.io/CircuitSimulator/public/index.html)
 
-## Project Workflow & Architecture
+## Project Workflow, Architecture, & Scrum Artifacts
 
 This project follows an incremental **Scrum** and **Test-Driven Development (TDD)** workflow:
 
 - **`src/engine/`**: Pure JavaScript circuit solver and thermal physics. Zero UI or React dependencies so all math can be tested headlessly.
 - **`src/components/`**: React Flow UI cards and interactive wire edges.
-- **`docs/backlog.md`**: Prioritized product backlog across sprints.
-- **`docs/sprint-log.md`**: Active sprint tasks, status, and session notes.
+- **`docs/product-backlog.md`**: Product Goal and prioritized Product Backlog.
+- **`docs/sprint-backlog.md`**: Current Sprint Goal, selected Product Backlog Items, and active delivery plan.
+- **`docs/definition-of-done.md`**: Quality criteria every Increment must satisfy before work is considered Done.
+- **`docs/increments/`**: Historical records describing completed product Increments.
 
 ## Current DC Simulation Behavior
 
@@ -20,7 +22,7 @@ This project follows an incremental **Scrum** and **Test-Driven Development (TDD
 - A source normally reports positive output current and output power.
 - A source wired backwards in a series chain can absorb current from the rest of the circuit. It reports this as `Input` current and negative power rather than incorrectly reporting positive output.
 - Short-circuit status is scoped to the affected connected circuit, and healthy disconnected circuits continue to solve normally.
-- Parallel ideal voltage sources do not have physically determined branch-current sharing. Their individual current readings are provisional until source impedance is implemented; the planned model is documented in [the backlog](./docs/backlog.md).
+- Parallel ideal voltage sources do not have physically determined branch-current sharing. Their individual current readings are provisional until source impedance is implemented; the planned model is documented in [the Product Backlog](./docs/product-backlog.md).
 
 ## Prerequisites
 
